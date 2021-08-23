@@ -69,7 +69,7 @@ for j in range(simulation_runs_per_node):
 
         nonlev_depot_value[j, i + 1] = nonlev_depot_value[j, i] * rt[j, i]
 
-        if (normal_depot_value[j, i + 1] <= 0 and normal_depot_value[j, 0] > 0) or lev_depot_value[j, i + 1] <= 0:
+        if (normal_depot_value[j, i + 1] <= 0 and normal_depot_value[j, 0] > 0) or (lev_depot_value[j, i + 1] <= 0 and lev_depot_value[j, 0] > 0):
             normal_depot_value[j, i + 1] = np.nan
             lev_depot_value[j, i + 1] = np.nan
 
