@@ -18,7 +18,7 @@ daily_lev_cost = 1.01 ** (1 / 365)
 transaction_cost = 1
 start_capital = 100000
 leverage = 2
-total_simulation_runs = 10000
+total_simulation_runs = 100
 rebalance_period = np.inf
 tax_rate = 0.20
 
@@ -51,13 +51,11 @@ for j in range(simulation_runs_per_node):
         if is_rebalance_day:
             rebalance_amount = lev_depot_value[j, 0] - lev_depot.getCurrentValue()
             if rebalance_amount > 0:
-                verlustTopfValue = verlustTopf.value
                 sellAmount = normal_depot.calculateSellAmount(rebalance_amount + transaction_cost)
                 cash = normal_depot.sell(sellAmount)
                 taxes[j, i + 1] = taxes[j, i] + sellAmount - cash
                 lev_depot.purchase(i + 1, rebalance_amount)
             else:
-                verlustTopfValue = verlustTopf.value
                 cash = lev_depot.sell(-rebalance_amount)
                 taxes[j, i + 1] = taxes[j, i] - rebalance_amount - cash
                 normal_depot.purchase(i + 1, -rebalance_amount - transaction_cost)
@@ -71,9 +69,9 @@ for j in range(simulation_runs_per_node):
 
         nonlev_depot_value[j, i + 1] = nonlev_depot_value[j, i] * rt[j, i]
 
-        if normal_depot_value[j, i + 1] + lev_depot_value[j, i + 1] < 0:
-            normal_depot_value[j, i + 1] = 0
-            lev_depot_value[j, i + 1] = 0
+        if (normal_depot_value[j, i + 1] <= 0 and normal_depot_value[j, 0] > 0) or lev_depot_value[j, i + 1] <= 0:
+            normal_depot_value[j, i + 1] = np.nan
+            lev_depot_value[j, i + 1] = np.nan
 
     taxes[j, -1] += normal_depot.getCurrentTaxes() + lev_depot.getCurrentTaxes()
 
@@ -108,16 +106,17 @@ if rank == 0:
     assets_nonlev = all_nonlev_depot
 
     print('levWithRebalanceResult')
-    print('number > 1: {}, mean: {}, var: {}, median: {}, max: {}, taxes: {}'.format(
-        np.sum(assets_lev_with_rebalance > start_capital) / assets_lev_with_rebalance.size,
-        np.mean(assets_lev_with_rebalance), np.var(assets_lev_with_rebalance, ddof=1),
-        np.median(assets_lev_with_rebalance), np.max(assets_lev_with_rebalance), np.mean(all_taxes)))
+    print('number > 1: {}, number rebalance fails: {}, mean: {}, var: {}, median: {}, max: {}, taxes: {}'.format(
+        np.nansum(assets_lev_with_rebalance > start_capital) / assets_lev_with_rebalance.size,
+        np.count_nonzero(np.isnan(assets_lev_with_rebalance)),
+        np.nanmean(assets_lev_with_rebalance), np.nanvar(assets_lev_with_rebalance, ddof=1),
+        np.nanmedian(assets_lev_with_rebalance), np.nanmax(assets_lev_with_rebalance), np.nanmean(all_taxes)))
     print('nonLevResult')
     print('number > 1: {}, mean: {}, var: {}, median: {}, max: {}, taxes: {}'.format(
-        np.sum(assets_nonlev > start_capital) / assets_nonlev.size,
-        np.mean(assets_nonlev),
-        np.var(assets_nonlev, ddof=1),
-        np.median(assets_nonlev), np.max(assets_nonlev), np.mean(all_nonlev_taxes)))
+        np.nansum(assets_nonlev > start_capital) / assets_nonlev.size,
+        np.nanmean(assets_nonlev),
+        np.nanvar(assets_nonlev, ddof=1),
+        np.nanmedian(assets_nonlev), np.nanmax(assets_nonlev), np.nanmean(all_nonlev_taxes)))
 
-    plt.hist((assets_lev_with_rebalance - start_capital) / start_capital, bins=1000)
+    plt.hist(assets_lev_with_rebalance / start_capital, bins=1000)
     plt.show()
