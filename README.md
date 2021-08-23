@@ -4,7 +4,7 @@ This project allows running a monte carlo simulation for different leveraged ETF
 
 ## Getting Started
 
-#Prerequisites
+### Prerequisites
 
 - MPI
 - mpi4py
